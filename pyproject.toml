@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "linux-devops-lab"
+version = "0.1.0"
+description = "Executable Linux process and network diagnostics"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+network-probe = "network_probe:main"
+
+[tool.setuptools]
+py-modules = ["graceful_service", "network_probe"]
+
+[tool.ruff]
+line-length = 100
