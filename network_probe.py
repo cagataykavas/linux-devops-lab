@@ -82,7 +82,7 @@ def diagnose_endpoint(
     dns_started = clock()
     try:
         resolved = list(resolver(host, port))
-    except OSError as exc:
+    except OSError:
         finished = clock()
         return ProbeReport(
             host,
