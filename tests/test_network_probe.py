@@ -77,9 +77,7 @@ def test_tls_handshake_is_measured_separately():
 
 
 def test_empty_dns_answer_fails_closed():
-    report = diagnose_endpoint(
-        "empty.example", 443, resolver=lambda host, port: [], clock=Clock()
-    )
+    report = diagnose_endpoint("empty.example", 443, resolver=lambda host, port: [], clock=Clock())
     assert report.ok is False
     assert report.failure_stage == "dns"
 
