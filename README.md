@@ -33,3 +33,12 @@ tail -n 100 app.log
 ## Mini lab: graceful service shutdown
 
 See `graceful_service.py` for a process that handles SIGTERM, stops accepting work and exits cleanly. This is the behavior container orchestrators expect during rolling deployments.
+
+## Route intent verification
+
+`route_guard.py` validates a captured Linux main routing table against explicit
+destination intent. It applies longest-prefix and metric precedence, rejects
+ambiguous or terminal routes, and verifies the selected interface and optional
+gateway allowlist without requiring root access. See
+[`docs/route-intent-verifier.md`](docs/route-intent-verifier.md) for the policy
+format, operational workflow, and limitations.

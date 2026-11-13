@@ -1,0 +1,33 @@
+name: Route intent verifier
+
+on:
+  pull_request:
+    paths:
+      - "route_guard.py"
+      - "tests/test_route_guard.py"
+      - "docs/route-intent-verifier.md"
+      - ".github/workflows/route-intent.yml"
+  push:
+    branches: [main]
+    paths:
+      - "route_guard.py"
+      - "tests/test_route_guard.py"
+      - "docs/route-intent-verifier.md"
+      - ".github/workflows/route-intent.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --disable-pip-version-check ruff==0.14.3
+      - run: ruff check route_guard.py tests/test_route_guard.py
+      - run: python -m compileall -q route_guard.py tests/test_route_guard.py
+      - run: python -m unittest discover -s tests -p 'test_route_guard.py' -v
