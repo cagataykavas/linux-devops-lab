@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "maximum_snapshot_age_seconds": 300,
+  "maximum_future_skew_seconds": 5,
+  "expectations": [
+    {"key": "net/ipv4/ip_forward", "allowed_values": [0]},
+    {"key": "net/ipv4/tcp_syncookies", "allowed_values": [1]},
+    {"key": "net/ipv4/conf/all/accept_redirects", "allowed_values": [0]},
+    {"key": "net/ipv4/conf/all/accept_source_route", "allowed_values": [0]},
+    {"key": "net/ipv4/conf/all/send_redirects", "allowed_values": [0]},
+    {"key": "net/ipv4/conf/default/accept_redirects", "allowed_values": [0]},
+    {"key": "net/ipv4/conf/default/accept_source_route", "allowed_values": [0]},
+    {"key": "net/ipv4/conf/default/send_redirects", "allowed_values": [0]},
+    {"key": "net/ipv4/conf/eth0/log_martians", "allowed_values": [1]},
+    {"key": "net/ipv4/conf/eth0/route_localnet", "allowed_values": [0]},
+    {"key": "net/ipv4/conf/eth0/rp_filter", "allowed_values": [1, 2]},
+    {"key": "net/ipv6/conf/all/accept_redirects", "allowed_values": [0]},
+    {"key": "net/ipv6/conf/all/accept_source_route", "allowed_values": [-1, 0]},
+    {"key": "net/ipv6/conf/all/forwarding", "allowed_values": [0]},
+    {"key": "net/ipv6/conf/default/accept_redirects", "allowed_values": [0]},
+    {"key": "net/ipv6/conf/default/accept_source_route", "allowed_values": [-1, 0]}
+  ]
+}
