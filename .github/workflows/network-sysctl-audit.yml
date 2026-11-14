@@ -1,0 +1,36 @@
+name: Network sysctl audit
+
+on:
+  pull_request:
+    paths:
+      - "network_sysctl_audit.py"
+      - "tests/test_network_sysctl_audit.py"
+      - "examples/server-network-sysctl-policy.json"
+      - "docs/network-sysctl-audit.md"
+      - ".github/workflows/network-sysctl-audit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "network_sysctl_audit.py"
+      - "tests/test_network_sysctl_audit.py"
+      - "examples/server-network-sysctl-policy.json"
+      - "docs/network-sysctl-audit.md"
+      - ".github/workflows/network-sysctl-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff==0.17.5
+      - run: ruff check network_sysctl_audit.py tests/test_network_sysctl_audit.py
+      - run: ruff format --check network_sysctl_audit.py tests/test_network_sysctl_audit.py
+      - run: python -m compileall -q network_sysctl_audit.py tests/test_network_sysctl_audit.py
+      - run: python -m unittest discover -s tests -p 'test_network_sysctl_audit.py' -v
+      - run: python network_sysctl_audit.py --help
