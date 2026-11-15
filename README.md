@@ -33,3 +33,11 @@ tail -n 100 app.log
 ## Mini lab: graceful service shutdown
 
 See `graceful_service.py` for a process that handles SIGTERM, stops accepting work and exits cleanly. This is the behavior container orchestrators expect during rolling deployments.
+
+## DNS resolver admission
+
+`resolver-audit` validates a Linux `resolv.conf` against an explicit policy before rollout. It
+allowlists resolver networks and search suffixes, bounds retry amplification, rejects ambiguous
+directives and emits stable CI exit codes. See
+[`docs/dns-resolver-policy-audit.md`](docs/dns-resolver-policy-audit.md) for the evidence contract,
+limitations and an example invocation.
