@@ -1,0 +1,20 @@
+{
+  "allowed_nameserver_cidrs": [
+    "10.42.0.0/16",
+    "127.0.0.0/8",
+    "::1/128"
+  ],
+  "allowed_search_suffixes": [
+    "svc.cluster.local",
+    "cluster.local"
+  ],
+  "allowed_option_flags": [
+    "edns0",
+    "rotate",
+    "trust-ad"
+  ],
+  "max_nameservers": 3,
+  "max_ndots": 2,
+  "max_timeout_seconds": 2,
+  "max_attempts": 2
+}
