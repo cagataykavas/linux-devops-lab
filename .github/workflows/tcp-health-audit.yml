@@ -1,0 +1,40 @@
+name: tcp-health-audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tcp_health_audit.py"
+      - "tests/test_tcp_health_audit.py"
+      - "docs/tcp-health-audit.md"
+      - ".github/workflows/tcp-health-audit.yml"
+  pull_request:
+    paths:
+      - "tcp_health_audit.py"
+      - "tests/test_tcp_health_audit.py"
+      - "docs/tcp-health-audit.md"
+      - ".github/workflows/tcp-health-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned linter
+        run: python -m pip install ruff==0.12.11
+      - name: Lint and format check
+        run: |
+          ruff check tcp_health_audit.py tests/test_tcp_health_audit.py
+          ruff format --check tcp_health_audit.py tests/test_tcp_health_audit.py
+      - name: Compile
+        run: python -m compileall -q tcp_health_audit.py tests/test_tcp_health_audit.py
+      - name: Run tests
+        run: python -m unittest discover -s tests -p 'test_tcp_health_audit.py' -v
+      - name: CLI smoke
+        run: python tcp_health_audit.py --help >/dev/null
