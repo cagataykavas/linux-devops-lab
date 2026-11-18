@@ -5,6 +5,7 @@ import stat
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import link_health_audit as audit
 
@@ -136,29 +137,58 @@ class EvaluationTests(unittest.TestCase):
 
 
 class FilesystemTests(unittest.TestCase):
-    def test_collects_only_fixed_interface_fields(self) -> None:
+    def test_parses_only_fixed_proc_net_dev_fields(self) -> None:
+        table = audit._parse_proc_net_dev(
+            "Inter-| Receive | Transmit\n"
+            " face |bytes packets errs drop fifo frame compressed multicast|"
+            "bytes packets errs drop fifo colls carrier compressed\n"
+            " eth0: 10 2 3 4 5 6 7 8 20 9 10 11 12 13 14 15\n"
+        )
+        self.assertEqual(
+            table["eth0"],
+            {
+                "rx_packets": 2,
+                "rx_errors": 3,
+                "rx_dropped": 4,
+                "tx_packets": 9,
+                "tx_errors": 10,
+                "tx_dropped": 11,
+            },
+        )
+
+    def test_collects_namespace_local_procfs_and_identity(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            sysfs = root / "sys/class/net"
             proc = root / "proc"
-            interface = sysfs / "eth0"
-            (interface / "statistics").mkdir(parents=True)
             (proc / "sys/kernel/random").mkdir(parents=True)
             (proc / "self/ns").mkdir(parents=True)
+            (proc / "net").mkdir(parents=True)
             (proc / "sys/kernel/random/boot_id").write_text(
                 "11111111-1111-1111-1111-111111111111\n", encoding="ascii"
             )
             (proc / "self/ns/net").write_text("namespace", encoding="ascii")
-            (interface / "ifindex").write_text("2\n", encoding="ascii")
-            (interface / "operstate").write_text("up\n", encoding="ascii")
-            for index, counter in enumerate(audit.COUNTERS):
-                (interface / "statistics" / counter).write_text(
-                    str(index), encoding="ascii"
-                )
+            (proc / "net/dev").write_text(
+                "Inter-| Receive | Transmit\n"
+                " face |bytes packets errs drop fifo frame compressed multicast|"
+                "bytes packets errs drop fifo colls carrier compressed\n"
+                " eth0: 0 1 2 3 0 0 0 0 0 4 5 6 0 0 0 0\n",
+                encoding="ascii",
+            )
 
-            result = audit.collect_snapshot(["eth0"], sysfs_root=sysfs, proc_root=proc)
+            with mock.patch.object(
+                audit, "_interface_identity", return_value=(2, "up")
+            ):
+                result = audit.collect_snapshot(["eth0"], proc_root=proc)
             self.assertEqual(result.interfaces["eth0"].counters["tx_errors"], 5)
             self.assertEqual(result.boot_id, "11111111-1111-1111-1111-111111111111")
+
+    def test_malformed_or_duplicate_proc_interfaces_are_rejected(self) -> None:
+        header = "Inter-| Receive | Transmit\n face |packets\n"
+        with self.assertRaisesRegex(audit.InvalidEvidence, "malformed"):
+            audit._parse_proc_net_dev(header + " eth0: 1 2\n")
+        row = " eth0: " + " ".join("0" for _ in range(16)) + "\n"
+        with self.assertRaisesRegex(audit.InvalidEvidence, "duplicate"):
+            audit._parse_proc_net_dev(header + row + row)
 
     def test_duplicate_policy_key_and_symlink_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
