@@ -42,3 +42,8 @@ ambiguous or terminal routes, and verifies the selected interface and optional
 gateway allowlist without requiring root access. See
 [`docs/route-intent-verifier.md`](docs/route-intent-verifier.md) for the policy
 format, operational workflow, and limitations.
+
+`live_route_guard.py` complements that deterministic snapshot check by asking the
+kernel for each literal destination's actual route decision. It executes a fixed
+`ip -j route get` argument vector without a shell, applies a per-destination
+deadline, and validates the selected device and gateway against the same policy.
