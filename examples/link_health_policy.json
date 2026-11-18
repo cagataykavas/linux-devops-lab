@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "interfaces": {
+    "eth0": {
+      "max_rx_errors_per_second": 0,
+      "max_tx_errors_per_second": 0,
+      "max_rx_drop_ratio": 0.001,
+      "max_tx_drop_ratio": 0.001,
+      "min_rx_packets_for_ratio": 100,
+      "min_tx_packets_for_ratio": 100,
+      "require_operstate_up": true
+    }
+  }
+}
