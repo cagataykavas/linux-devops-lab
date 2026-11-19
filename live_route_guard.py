@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from route_explain import RouteDiagnosticCollector
 from route_guard import DestinationIntent, ValidationError, load_json, parse_policy
 
 MAX_LOOKUP_BYTES = 64 * 1024
@@ -34,6 +35,7 @@ class KernelRoute:
     preferred_source: ipaddress.IPv4Address | ipaddress.IPv6Address | None
     table: int
     route_type: str
+    nexthop_id: int | None
 
     def evidence(self) -> dict[str, Any]:
         return {
@@ -45,6 +47,7 @@ class KernelRoute:
             else None,
             "table": self.table,
             "type": self.route_type,
+            "nexthop_id": self.nexthop_id,
         }
 
 
@@ -89,6 +92,18 @@ def _parse_table(value: Any) -> int:
             raise LookupError("kernel route table name is unsupported")
     if not isinstance(value, int) or not 1 <= value <= 2**32 - 1:
         raise LookupError("kernel route table must be within [1, 4294967295]")
+    return value
+
+
+def _parse_nexthop_id(value: Any) -> int | None:
+    if value is None:
+        return None
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int)
+        or not 1 <= value <= 2**32 - 1
+    ):
+        raise LookupError("kernel route nexthop id must be within [1, 4294967295]")
     return value
 
 
@@ -155,6 +170,7 @@ def parse_kernel_route(
         ),
         table=_parse_table(item.get("table")),
         route_type=route_type,
+        nexthop_id=_parse_nexthop_id(item.get("nhid")),
     )
 
 
@@ -209,6 +225,7 @@ def audit_live_routes(
     *,
     ip_command: Path = DEFAULT_IP_COMMAND,
     timeout_seconds: float = 2.0,
+    explain_rejections: bool = False,
     runner: Runner = subprocess.run,
 ) -> dict[str, Any]:
     if isinstance(timeout_seconds, bool) or not isinstance(
@@ -217,8 +234,19 @@ def audit_live_routes(
         raise ValidationError("lookup timeout must be numeric")
     if not 0.1 <= timeout_seconds <= 10.0:
         raise ValidationError("lookup timeout must be within [0.1, 10] seconds")
+    if not isinstance(explain_rejections, bool):
+        raise ValidationError("explain_rejections must be boolean")
 
     checks: list[dict[str, Any]] = []
+    diagnostic_collector = (
+        RouteDiagnosticCollector(
+            ip_command=ip_command,
+            timeout_seconds=float(timeout_seconds),
+            runner=runner,
+        )
+        if explain_rejections
+        else None
+    )
     for intent in intents:
         try:
             route = _lookup(
@@ -228,9 +256,13 @@ def audit_live_routes(
                 runner=runner,
             )
         except LookupError as exc:
+            diagnostics = None
+            if diagnostic_collector is not None:
+                diagnostics = diagnostic_collector.collect(None)
             checks.append(
                 {
                     "address": str(intent.address),
+                    "diagnostics": diagnostics,
                     "name": intent.name,
                     "reason": str(exc),
                     "route": None,
@@ -254,9 +286,13 @@ def audit_live_routes(
             status = "fail"
             gateway = str(route.gateway) if route.gateway else "direct"
             reason = f"gateway {gateway!r} is not approved"
+        diagnostics = None
+        if status == "fail" and diagnostic_collector is not None:
+            diagnostics = diagnostic_collector.collect(route.nexthop_id)
         checks.append(
             {
                 "address": str(intent.address),
+                "diagnostics": diagnostics,
                 "name": intent.name,
                 "reason": reason,
                 "route": route.evidence(),
@@ -277,6 +313,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--ip-command", type=Path, default=DEFAULT_IP_COMMAND)
     parser.add_argument("--timeout-seconds", type=float, default=2.0)
+    parser.add_argument(
+        "--explain-rejections",
+        action="store_true",
+        help="collect bounded rule and selected-nexthop diagnostics on rejection",
+    )
     args = parser.parse_args(argv)
     try:
         intents = parse_policy(load_json(args.policy))
@@ -285,6 +326,7 @@ def main(argv: list[str] | None = None) -> int:
             intents,
             ip_command=ip_command,
             timeout_seconds=args.timeout_seconds,
+            explain_rejections=args.explain_rejections,
         )
     except ValidationError as exc:
         print(f"live_route_guard: {exc}", file=sys.stderr)

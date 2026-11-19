@@ -134,6 +134,8 @@ class LiveRouteGuardTests(unittest.TestCase):
         for value in (True, 0.0, 10.1):
             with self.subTest(value=value), self.assertRaises(ValidationError):
                 audit_live_routes(_policy(), timeout_seconds=value)
+        with self.assertRaisesRegex(ValidationError, "must be boolean"):
+            audit_live_routes(_policy(), explain_rejections="yes")
 
     def test_rejects_terminal_route(self) -> None:
         runner = Mock(
@@ -177,6 +179,70 @@ class LiveRouteGuardTests(unittest.TestCase):
             os.symlink(executable, link)
             with self.assertRaisesRegex(ValidationError, "non-symlink"):
                 validate_ip_command(link)
+
+    def test_rejection_diagnostics_are_opt_in_and_nexthop_scoped(self) -> None:
+        route = _completed(
+            [
+                {
+                    "dst": "203.0.113.10",
+                    "gateway": "192.0.2.1",
+                    "dev": "eth0",
+                    "nhid": 42,
+                }
+            ]
+        )
+        runner = Mock(
+            side_effect=[
+                route,
+                _completed(
+                    [
+                        {
+                            "priority": 100,
+                            "src": "10.0.0.0/8",
+                            "table": 100,
+                        }
+                    ]
+                ),
+                _completed(
+                    [
+                        {
+                            "id": 42,
+                            "dev": "eth0",
+                            "via": {"family": "inet", "addr": "192.0.2.1"},
+                        }
+                    ]
+                ),
+            ]
+        )
+
+        report = audit_live_routes(_policy(), explain_rejections=True, runner=runner)
+
+        self.assertFalse(report["ok"])
+        diagnostics = report["checks"][0]["diagnostics"]
+        self.assertEqual(diagnostics["status"], "complete")
+        self.assertEqual(diagnostics["nexthop"]["id"], 42)
+        self.assertNotIn("10.0.0.0", json.dumps(diagnostics))
+        self.assertNotIn("192.0.2.1", json.dumps(diagnostics))
+        self.assertEqual(runner.call_count, 3)
+
+    def test_passing_route_never_collects_diagnostics(self) -> None:
+        runner = Mock(
+            return_value=_completed(
+                [
+                    {
+                        "dst": "203.0.113.10",
+                        "gateway": "192.0.2.1",
+                        "dev": "wg0",
+                    }
+                ]
+            )
+        )
+
+        report = audit_live_routes(_policy(), explain_rejections=True, runner=runner)
+
+        self.assertTrue(report["ok"])
+        self.assertIsNone(report["checks"][0]["diagnostics"])
+        self.assertEqual(runner.call_count, 1)
 
 
 if __name__ == "__main__":
