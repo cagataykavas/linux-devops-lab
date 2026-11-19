@@ -5,18 +5,24 @@ on:
     paths:
       - "route_guard.py"
       - "live_route_guard.py"
+      - "route_explain.py"
       - "tests/test_route_guard.py"
       - "tests/test_live_route_guard.py"
+      - "tests/test_route_explain.py"
       - "docs/route-intent-verifier.md"
+      - "README.md"
       - ".github/workflows/route-intent.yml"
   push:
     branches: [main]
     paths:
       - "route_guard.py"
       - "live_route_guard.py"
+      - "route_explain.py"
       - "tests/test_route_guard.py"
       - "tests/test_live_route_guard.py"
+      - "tests/test_route_explain.py"
       - "docs/route-intent-verifier.md"
+      - "README.md"
       - ".github/workflows/route-intent.yml"
 
 permissions:
@@ -32,8 +38,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --disable-pip-version-check ruff==0.14.3
-      - run: ruff check route_guard.py live_route_guard.py tests/test_route_guard.py tests/test_live_route_guard.py
-      - run: ruff format --check live_route_guard.py tests/test_live_route_guard.py
-      - run: python -m compileall -q route_guard.py live_route_guard.py tests/test_route_guard.py tests/test_live_route_guard.py
-      - run: python -m unittest discover -s tests -p 'test_*route_guard.py' -v
+      - run: ruff check route_guard.py live_route_guard.py route_explain.py tests/test_route_guard.py tests/test_live_route_guard.py tests/test_route_explain.py
+      - run: ruff format --check live_route_guard.py route_explain.py tests/test_live_route_guard.py tests/test_route_explain.py
+      - run: python -m compileall -q route_guard.py live_route_guard.py route_explain.py tests/test_route_guard.py tests/test_live_route_guard.py tests/test_route_explain.py
+      - run: python -m unittest discover -s tests -p 'test_*route*.py' -v
       - run: python live_route_guard.py --help >/dev/null

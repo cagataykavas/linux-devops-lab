@@ -47,3 +47,6 @@ format, operational workflow, and limitations.
 kernel for each literal destination's actual route decision. It executes a fixed
 `ip -j route get` argument vector without a shell, applies a per-destination
 deadline, and validates the selected device and gateway against the same policy.
+An opt-in rejection diagnostic adds privacy-reduced policy-rule summaries and the
+exact selected nexthop object without dumping selector values or the full nexthop
+inventory.

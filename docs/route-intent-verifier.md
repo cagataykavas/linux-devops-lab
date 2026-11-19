@@ -75,12 +75,39 @@ route-table entries. A custom table in the result is valid when its selected dev
 and optional gateway satisfy the reviewed destination policy; the table ID remains
 evidence for operators investigating policy-routing behavior.
 
+### Explain rejected decisions
+
+Add `--explain-rejections` when a failed route check should carry bounded diagnostic
+context:
+
+```bash
+python live_route_guard.py \
+  --policy route-policy.json \
+  --explain-rejections
+```
+
+Diagnostics run only for rejected destinations. The adapter collects at most 256
+policy rules and reports each rule's priority, numeric table, action, and the names
+of selector fields. Selector values—including source/destination prefixes, marks,
+UID ranges, and input/output interfaces—are deliberately omitted. Unknown values
+are counted rather than copied into the report. One rule snapshot and each distinct
+referenced nexthop are cached per audit run so multiple rejected destinations do
+not multiply identical kernel queries.
+
+When `ip route get` returns an `nhid`, the adapter asks for exactly that object with
+`ip -j nexthop get id <id>`; it never dumps the full nexthop inventory. The report
+retains the object ID, mode, device, gateway family, and bounded group member IDs and
+weights, but not gateway addresses. Both commands use the same fixed environment,
+deadline, 64 KiB output limit, and stderr suppression as the route lookup. A
+diagnostic failure is recorded as unavailable or partial without changing the
+already-rejected admission result.
+
 ## Scope and limitations
 
 The static utility intentionally models only a captured main table. The live
 adapter observes the kernel's final route decision, including policy-routing
-effects, but does not explain which `ip rule`, VRF, packet mark or ECMP/nexthop
-choice produced it. Both checks are point-in-time and a route can change
-immediately afterward. Run them inside the workload's actual network namespace,
-retain the bounded report with deployment evidence, and use `ip -j rule` plus
-`ip -j nexthop` when root-cause evidence is required.
+effects. Optional diagnostics provide privacy-reduced context; they do not evaluate
+whether every rule selector matched the packet, prove which rule fired, resolve a
+VRF, or prove an ECMP member carried traffic. All checks are point-in-time and a
+route can change immediately afterward. Run them inside the workload's actual
+network namespace and retain the bounded report with deployment evidence.
